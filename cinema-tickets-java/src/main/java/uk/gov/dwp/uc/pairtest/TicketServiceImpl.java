@@ -12,6 +12,13 @@ public class TicketServiceImpl implements TicketService {
     private final TicketPaymentService ticketPaymentService;
     private final SeatReservationService seatReservationService;
 
+    private static class TicketTotals {
+        int totalTickets;
+        int totalAdultTickets;
+        int totalChildTickets;
+        int totalInfantTickets;
+    }
+
     private static final int MAX_TICKETS = 25;
     private static final int ADULT_TICKET_PRICE = 25;
     private static final int CHILD_TICKET_PRICE = 15;
@@ -22,6 +29,7 @@ public class TicketServiceImpl implements TicketService {
         }
         this.ticketPaymentService = ticketPaymentService;
         this.seatReservationService = seatReservationService;
+
     }
 
     @Override
@@ -30,6 +38,9 @@ public class TicketServiceImpl implements TicketService {
 
         validateAccountId(accountId);
         validateTicketTypeRequests(ticketTypeRequests);
+
+        TicketTotals totals = calculateTicketTotals(ticketTypeRequests);
+
 
     }
 
@@ -49,5 +60,38 @@ public class TicketServiceImpl implements TicketService {
             }
         }
     }
+
+
+    private TicketTotals calculateTicketTotals(TicketTypeRequest... ticketTypeRequests) {
+
+        TicketTotals totals = new TicketTotals();
+
+        totals.totalTickets = 0;
+        totals.totalAdultTickets = 0;
+        totals.totalChildTickets = 0;
+        totals.totalInfantTickets = 0;
+
+        for (TicketTypeRequest request : ticketTypeRequests) {
+            int count = request.getNoOfTickets();
+            totals.totalTickets += count;
+
+            switch (request.getTicketType()) {
+                case ADULT:
+                    totals.totalAdultTickets += count;
+                    break;
+                case CHILD:
+                    totals.totalChildTickets += count;
+                    break;
+                case INFANT:
+                    totals.totalInfantTickets += count;
+                    break;
+                default:
+                    throw new InvalidPurchaseException("Unknown ticket type");
+            }
+        }
+        return totals;
+    }
+
+
 
 }
