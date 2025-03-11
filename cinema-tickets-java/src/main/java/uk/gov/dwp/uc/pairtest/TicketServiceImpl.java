@@ -1,5 +1,7 @@
 package uk.gov.dwp.uc.pairtest;
 
+import java.util.Arrays;
+
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
@@ -41,6 +43,13 @@ public class TicketServiceImpl implements TicketService {
 
         TicketTotals totals = calculateTicketTotals(ticketTypeRequests);
 
+        validateTicketTotals(totals);
+
+        int totalAmountToPay = calculateTotalAmount(totals);
+        int totalSeatsToReserve = calculateSeatsToReserve(totals);
+
+        ticketPaymentService.makePayment(accountId, totalAmountToPay);
+        seatReservationService.reserveSeat(accountId, totalSeatsToReserve);
 
     }
 
@@ -61,7 +70,6 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
-
     private TicketTotals calculateTicketTotals(TicketTypeRequest... ticketTypeRequests) {
 
         TicketTotals totals = new TicketTotals();
@@ -71,27 +79,52 @@ public class TicketServiceImpl implements TicketService {
         totals.totalChildTickets = 0;
         totals.totalInfantTickets = 0;
 
-        for (TicketTypeRequest request : ticketTypeRequests) {
-            int count = request.getNoOfTickets();
-            totals.totalTickets += count;
+        Arrays.stream(ticketTypeRequests)
+                .forEach(request -> {
+                    int count = request.getNoOfTickets();
+                    totals.totalTickets += count;
 
-            switch (request.getTicketType()) {
-                case ADULT:
-                    totals.totalAdultTickets += count;
-                    break;
-                case CHILD:
-                    totals.totalChildTickets += count;
-                    break;
-                case INFANT:
-                    totals.totalInfantTickets += count;
-                    break;
-                default:
-                    throw new InvalidPurchaseException("Unknown ticket type");
-            }
-        }
+                    switch (request.getTicketType()) {
+                        case ADULT:
+                            totals.totalAdultTickets += count;
+                            break;
+                        case CHILD:
+                            totals.totalChildTickets += count;
+                            break;
+                        case INFANT:
+                            totals.totalInfantTickets += count;
+                            break;
+                        default:
+                            throw new InvalidPurchaseException("Unknown ticket type");
+                    }
+                });
         return totals;
     }
 
+    private void validateTicketTotals(TicketTotals totals) {
+        if (totals.totalTickets == 0) {
+            throw new InvalidPurchaseException("No tickets requested");
+        }
+        if (totals.totalTickets > MAX_TICKETS) {
+            throw new InvalidPurchaseException("Cannot purchase more than " +
+                    MAX_TICKETS + " tickets at a time");
+        }
+        if (totals.totalAdultTickets == 0 && (totals.totalChildTickets > 0 || totals.totalInfantTickets > 0)) {
+            throw new InvalidPurchaseException(
+                    "Child or Infant tickets cannot be purchased without at least one Adult ticket");
+        }
+        if (totals.totalInfantTickets > totals.totalAdultTickets) {
+            throw new InvalidPurchaseException("Each infant must be accompanied by an adult. Too many infants.");
+        }
+    }
 
+    private int calculateTotalAmount(TicketTotals totals) {
+        return totals.totalAdultTickets * ADULT_TICKET_PRICE +
+               totals.totalChildTickets * CHILD_TICKET_PRICE;
+    }
+
+    private int calculateSeatsToReserve(TicketTotals totals) {
+        return totals.totalAdultTickets + totals.totalChildTickets;
+    }
 
 }
