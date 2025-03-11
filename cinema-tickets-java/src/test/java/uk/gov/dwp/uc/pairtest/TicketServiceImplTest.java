@@ -14,7 +14,6 @@ import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest.Type;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 
-
 public class TicketServiceImplTest {
 
     @Mock
@@ -77,7 +76,7 @@ public class TicketServiceImplTest {
         verify(mockSeatReservationService, times(1)).reserveSeat(1L, 3);
     }
 
-        @Test
+    @Test
     public void testNoTicketsRequested() {
         assertThrows(InvalidPurchaseException.class, () -> {
             ticketService.purchaseTickets(1L);
@@ -121,6 +120,24 @@ public class TicketServiceImplTest {
     public void testInvalidTicketTypeRequest_Null() {
         assertThrows(InvalidPurchaseException.class, () -> {
             ticketService.purchaseTickets(1L, (TicketTypeRequest) null);
+        });
+    }
+
+    @Test
+    public void testInvalidTicketTypeRequest_NullType() {
+        TicketTypeRequest adult = new TicketTypeRequest(Type.ADULT, 1);
+        TicketTypeRequest infant = new TicketTypeRequest(null, 2);
+        assertThrows(InvalidPurchaseException.class, () -> {
+            ticketService.purchaseTickets(1L, adult, infant);
+        });
+    }
+
+    @Test
+    public void testInvalidTicketTypeRequest_NegativeQuantity() {
+        TicketTypeRequest adult = new TicketTypeRequest(Type.ADULT, 1);
+        TicketTypeRequest child = new TicketTypeRequest(Type.CHILD, -4);
+        assertThrows(InvalidPurchaseException.class, () -> {
+            ticketService.purchaseTickets(1L, adult, child);
         });
     }
 
