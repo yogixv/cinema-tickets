@@ -63,10 +63,14 @@ public class TicketServiceImpl implements TicketService {
         if (ticketTypeRequests == null || ticketTypeRequests.length == 0) {
             throw new InvalidPurchaseException("At least one ticket type request must be provided");
         }
-        for (TicketTypeRequest request : ticketTypeRequests) {
-            if (request == null || request.getTicketType() == null || request.getNoOfTickets() <= 0) {
-                throw new InvalidPurchaseException("Invalid ticket type request");
-            }
+        
+        boolean hasInvalidRequest = Arrays.stream(ticketTypeRequests)
+            .anyMatch(request -> request == null 
+                || request.getTicketType() == null 
+                || request.getNoOfTickets() <= 0);
+                
+        if (hasInvalidRequest) {
+            throw new InvalidPurchaseException("Invalid ticket type request");
         }
     }
 
